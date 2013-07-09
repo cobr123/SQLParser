@@ -10,25 +10,18 @@ class SQLParser extends JavaTokenParsers {
     opt(subquery_factoring_clause) ~
       "SELECT" ~
       opt(hint) ~
-      opt(("DISTINCT" | "UNIQUE")
-        | "ALL"
-
-      ) ~
+      opt(("DISTINCT" | "UNIQUE") | "ALL") ~
       select_list ~
-      "FROM" ~ (repsep(table_reference, ",")
-      | join_clause
-      | ("(" ~ join_clause ~ ")")
-      ) ~
+      "FROM" ~ (repsep(table_reference, ",") | join_clause | ("(" ~ join_clause ~ ")") ) ~
       opt(where_clause) ~
       opt(hierarchical_query_clause) ~
       opt(group_by_clause) ~
       opt("HAVING" ~ condition) ~
       //  opt( model_clause )           ~
       opt(("UNION" ~ opt("ALL")
-        | "INTERSECT"
-        | "MINUS"
-        ) ~
-        ("(" ~ subquery ~ ")")
+          | "INTERSECT"
+          | "MINUS"
+          ) ~ ("(" ~ subquery ~ ")")
       ) ~
       opt(order_by_clause)
 
@@ -41,35 +34,39 @@ class SQLParser extends JavaTokenParsers {
 
   def integer: Parser[Any] = wholeNumber
 
-  def column: Parser[Any] = ident
+  def keywords: Parser[Any] = "BEGIN" | "END" | "FOR" | "IF" | "THEN" | "CASE" | "WHEN"| "WHERE"| "SELECT"| "UPDATE"| "DELETE"| "INSERT" | "FROM"
 
-  def table: Parser[Any] = ident
+  def identifier = not(keywords) ~ ident
 
-  def view: Parser[Any] = ident
+  def column: Parser[Any] = identifier
 
-  def schema: Parser[Any] = ident
+  def table: Parser[Any] = identifier
 
-  def literal: Parser[Any] = decimalNumber | wholeNumber | ident
+  def view: Parser[Any] = identifier
+
+  def schema: Parser[Any] = identifier
+
+  def literal: Parser[Any] = decimalNumber | wholeNumber | identifier
 
   def number: Parser[Any] = floatingPointNumber
 
-  def otype: Parser[Any] = ident
+  def otype: Parser[Any] = identifier
 
-  def c_alias: Parser[Any] = ident
+  def c_alias: Parser[Any] = identifier
 
-  def sequence: Parser[Any] = ident
+  def sequence: Parser[Any] = identifier
 
   def subquery_factoring_clause: Parser[Any] = "WITH" ~ repsep(query_name ~ "AS" ~ "(" ~ subquery ~ ")", ",")
 
-  def query_name: Parser[Any] = ident
+  def query_name: Parser[Any] = identifier
 
   def hint: Parser[Any] = comment
 
-  def comment: Parser[Any] = mlComment | lineComment
+  def comment: Parser[Any] = commentBlock | lineComment
 
-  def mlComment: Parser[Any] = "/*" ~ ".*".r ~ "*/"
+  def commentBlock: Parser[Any] = "/*" ~ "[^(*/)]*".r ~ "*/"
 
-  def lineComment: Parser[Any] = "--" ~ ".*".r ~ not("\r\n" | "\n")
+  def lineComment: Parser[Any] = "--" ~ ".*".r
 
   def select_list: Parser[Any] = ("*"
     | (repsep((query_name ~ "." ~ "*")
@@ -81,10 +78,10 @@ class SQLParser extends JavaTokenParsers {
     )
 
   def expr: Parser[Any] = (
-    simple_expression
+    /*simple_expression
       | compound_expression
-      //      | case_expression
-      | cursor_expression
+      | case_expression
+      |*/ cursor_expression
     //      | datetime_expression
     //      | function_expression
     //      | interval_expression
@@ -97,8 +94,7 @@ class SQLParser extends JavaTokenParsers {
 
   def simple_expression: Parser[Any] =
     ((opt((query_name ~ ".")
-      | (opt(schema ~ ".") ~
-      (table ~ "." | view ~ "."))
+      | (opt(schema ~ ".") ~ (table ~ "." | view ~ "."))
     ) ~ (column | "ROWID"))
       | "ROWNUM"
       | string
@@ -113,22 +109,27 @@ class SQLParser extends JavaTokenParsers {
       | (expr ~ ("*" | "/" | "+" | "-" | "||") ~ expr)
       )
 
-  //  def case_expression: Parser[Any] =  (
-  //    "CASE" ~( simple_case_expression
-  //      | searched_case_expression
-  //    )
-  //      ~opt( else_clause )~
-  //  "END"  )
-  //  def simple_case_expression: Parser[Any] =
-  //    expr~
-  //    rep( "WHEN"~ comparison_expr ~"THEN"~ return_expr )
-  //  def searched_case_expression: Parser[Any] =
-  //  rep( "WHEN"~ condition ~"THEN"~ return_expr )
-  //  def else_clause: Parser[Any] =
-  //    "ELSE"~ else_expr
-  //  def comparison_expr: Parser[Any] =
-  //  def return_expr: Parser[Any] =
-  //  def else_expr: Parser[Any] =
+  def case_expression: Parser[Any] = (
+    "CASE" ~ (searched_case_expression | simple_case_expression)
+      ~ opt(else_clause) ~
+      "END")
+
+  def simple_case_expression: Parser[Any] =
+    expr ~
+      rep("WHEN" ~ comparison_expr ~ "THEN" ~ return_expr)
+
+  def searched_case_expression: Parser[Any] =
+    rep("WHEN" ~ condition ~ "THEN" ~ return_expr)
+
+  def else_clause: Parser[Any] =
+    "ELSE" ~ else_expr
+
+  def comparison_expr: Parser[Any] = expr
+
+  def return_expr: Parser[Any] = expr
+
+  def else_expr: Parser[Any] = expr
+
   def cursor_expression: Parser[Any] =
     "CURSOR" ~ "(" ~ subquery ~ ")"
 
@@ -146,7 +147,7 @@ class SQLParser extends JavaTokenParsers {
 
   def mm: Parser[Any] = integer
 
-  def time_zone_name: Parser[Any] = ident
+  def time_zone_name: Parser[Any] = identifier
 
   //  def function_expression: Parser[Any] =
   //  def interval_expression: Parser[Any] =
@@ -164,7 +165,7 @@ class SQLParser extends JavaTokenParsers {
       //   opt( flashback_query_clause )~
       opt(t_alias)
 
-  def t_alias: Parser[Any] = ident
+  def t_alias: Parser[Any] = identifier
 
   //  def flashback_query_clause: Parser[Any] =
   //  opt( "VERSIONS"~ "BETWEEN"~
@@ -188,9 +189,9 @@ class SQLParser extends JavaTokenParsers {
     | table_collection_expression
     )
 
-  def partition: Parser[Any] = ident
+  def partition: Parser[Any] = identifier
 
-  def subpartition: Parser[Any] = ident
+  def subpartition: Parser[Any] = identifier
 
   def sample_clause: Parser[Any] = "SAMPLE" ~ opt("BLOCK") ~
     "(" ~ sample_percent ~ ")" ~ opt("SEED" ~ "(" ~ seed_value ~ ")")
@@ -199,14 +200,14 @@ class SQLParser extends JavaTokenParsers {
 
   def seed_value: Parser[Any] = integer
 
-  def dblink: Parser[Any] = ident
+  def dblink: Parser[Any] = identifier
 
   def subquery_restriction_clause: Parser[Any] =
     "WITH" ~ (("READ" ~ "ONLY")
       | ("CHECK" ~ "OPTION" ~ opt("CONSTRAINT" ~ constraint))
       )
 
-  def constraint: Parser[Any] = ident
+  def constraint: Parser[Any] = identifier
 
   def table_collection_expression: Parser[Any] = "TABLE" ~ "(" ~ collection_expression ~ ")" ~ opt("(" ~ "+" ~ ")")
 
@@ -265,21 +266,46 @@ class SQLParser extends JavaTokenParsers {
     )
 
   def condition: Parser[Any] = (
-    /*  comparison_condition
-    | */ floating_point_condition
-    //      | logical_condition
-    //      | model_condition
-    //      | multiset_condition
-    //      | pattern_matching_condition
-    | range_condition
-    | null_condition
-    | XML_condition
-    | compound_condition
-    | exists_condition
-    | in_condition
-    | is_of_type_condition)
+   /* comparison_condition
+      |*/ floating_point_condition
+      //      | logical_condition
+      //      | model_condition
+      //      | multiset_condition
+      //      | pattern_matching_condition
+      | range_condition
+      | null_condition
+      | XML_condition
+      | compound_condition
+      | exists_condition
+      | in_condition
+      | is_of_type_condition)
 
-  //  def comparison_condition: Parser[Any] =
+  def comparison_condition: Parser[Any] = simple_comparison_condition | group_comparison_condition
+
+  def simple_comparison_condition: Parser[Any] =
+    ((expr ~
+      ("=" | "!=" | "^=" | "<>" | ">" | "<" | ">=" | "<=") ~
+      expr)
+      | ("(" ~ repsep(expr, ",") ~ ")" ~
+      ("=" | "!=" | "^=" | "<>") ~
+      "(" ~ subquery ~ ")"))
+
+  def group_comparison_condition: Parser[Any] =
+    ((expr ~
+      ("=" | "!=" | "^=" | "<>" | ">" | "<" | ">=" | "<=") ~
+      ("ANY" | "SOME" | "ALL") ~
+      "(" ~ {
+      expression_list | subquery
+    } ~ ")")
+      | ("(" ~ repsep(expr, ",") ~ ")" ~
+      ("=" | "!=" | "^=" | "<>") ~
+      ("ANY" | "SOME" | "ALL") ~
+      "(" ~ (repsep(expression_list, ",")
+      | subquery
+      ) ~
+      ")")
+      )
+
   def floating_point_condition: Parser[Any] =
     expr ~ "IS" ~ opt("NOT") ~ ("NAN" | "INFINITE")
 
@@ -322,9 +348,8 @@ class SQLParser extends JavaTokenParsers {
 
   def in_condition: Parser[Any] = (
     (expr ~ opt("NOT") ~ "IN" ~ "(" ~ (expression_list | subquery) ~ ")")
-      | ("(" ~ repsep(expr, ",") ~
+      | ("(" ~ repsep(expr, ",")~ ")" ~
       opt("NOT") ~ "IN" ~ "(" ~ (repsep(expression_list, ",") | subquery) ~ ")"
-      ~ ")"
       ))
 
   def is_of_type_condition: Parser[Any] =
@@ -363,11 +388,11 @@ class SQLParser extends JavaTokenParsers {
         , ","
       )
 
-  def reference_model_name: Parser[Any] = ident
+  def reference_model_name: Parser[Any] = identifier
 
   def position: Parser[Any] = integer
 
-  def main_model_name: Parser[Any] = ident
+  def main_model_name: Parser[Any] = identifier
 
   //  def model_column_clauses: Parser[Any] =
   //  opt( "PARTITION"~ "BY" ~repsep(expr ~opt(c_alias),",")~)~
