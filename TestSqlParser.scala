@@ -1,5 +1,29 @@
+import java.io.File
+
+/**
+ * Created with IntelliJ IDEA.
+ * User: r.tabulov
+ * Date: 08.07.13
+ * Time: 18:22
+ * To change this template use File | Settings | File Templates.
+ */
 object TestSqlParser extends SQLParser with App {
-//  val cmd = """select * from dual t"""
-    val cmd = """select * from dual t, dual2 t2"""
-  println(parse(cmd.toUpperCase()));
+  val file = new File("C:\\Users\\path\\sqlTests\\bind var.txt");
+  val source = scala.io.Source.fromFile(file)
+  val lines = source.mkString.toUpperCase()
+  source.close()
+  println(parse(lines));
+  println(lines);
+
+//  val testDir = new File("C:\\Users\\path\\sqlTests");
+//  for (file <- testDir.listFiles.filter(_.getName.endsWith(".txt"))) {
+//    val source = scala.io.Source.fromFile(file)
+//    val lines = source.mkString.toUpperCase()
+//    source.close()
+//    parse(lines) match {
+//      case None => println("FAIL: " + file.getCanonicalPath)
+//      case _ => println("OK  : " + file.getCanonicalPath)
+//    }
+//
+//  }
 }
