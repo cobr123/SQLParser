@@ -1,0 +1,7 @@
+select ('CLARK' || 'SMITH')
+      ,LENGTH('MOOSE') * 57
+      ,SQRT(144) + 72
+      ,to_date(TO_CHAR(sysdate
+                      ,'dd-mm-yy')
+              ,'dd-mm-yy')
+  from dual

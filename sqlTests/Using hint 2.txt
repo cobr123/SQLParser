@@ -1,0 +1,2 @@
+select --+cardinality(t 1)
+     * from dual t
