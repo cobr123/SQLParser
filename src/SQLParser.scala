@@ -101,16 +101,16 @@ class SQLParser extends DebugJavaTokenParsers {
 
   def select_list: Parser[Any] = "select_list" !!! (
     "*"
-      | (expr ~ opt(opt("AS") ~ c_alias))
+      | repsep(expr ~ opt(opt("AS") ~ c_alias), ",")
       | repsep((query_name ~ "." ~ "*"), ",")
     )
 
   //http://docs.oracle.com/cd/B28359_01/server.111/b28286/expressions.htm
-  //  def expr: Parser[Any] = "expr" !!! (
-  //    function_expression |
-  //      compound_expression |
-  //      simple_expression
-  //    )
+  def expr: Parser[Any] = "expr" !!! (
+    function_expression |
+//      compound_expression |
+      simple_expression
+    )
 
   //      case_expression
   //      cursor_expression |
@@ -134,27 +134,27 @@ class SQLParser extends DebugJavaTokenParsers {
 
 
   //http://docs.oracle.com/cd/B28359_01/server.111/b28286/expressions003.htm#sthref2739
-  //  def compound_expression: Parser[Any] = "compound_expression" !!! (compound_expression1 ||| compound_expression3 ||| compound_expression2)
+//  def compound_expression: Parser[Any] = "compound_expression" !!! compound_expression1 | compound_expression2 | compound_expression3
+//
+//  def compound_expression1: Parser[Any] = "compound_expression1" !!! "(" ~ expr ~ ")"
+//
+//  def compound_expression2: Parser[Any] = "compound_expression2" !!! ("+" | "-" | "PRIOR") ~ expr
+//
+//  def compound_expression3: Parser[Any] = "compound_expression3" !!! (expr ~ ("*" | "/" | "+" | "-" | "||") ~ expr)
+
+  //  def expr: Parser[Any] = simpleExpression ~ rep(("=" | "<>" | "<" | "<=" | ">=" | ">" | "in" | "||") ~ simpleExpression)
   //
-  //  def compound_expression1: Parser[Any] = "compound_expression1" !!! "(" ~ expr ~ ")"
+  //  def simpleExpression: Parser[Any] = term ~ rep(("+" | "-" | "or") ~ term)
   //
-  //  def compound_expression2: Parser[Any] = "compound_expression2" !!! ("+" | "-" | "PRIOR") ~ expr
+  //  def term: Parser[Any] = signedFactor ~ rep(("*" | "/" | "div" | "mod" | "and") ~ signedFactor)
   //
-  //  def compound_expression3: Parser[Any] = "compound_expression3" !!! (expr ~ ("*" | "/" | "+" | "-" | "||") ~ expr)
-
-  def expr: Parser[Any] = simpleExpression ~ rep(("=" | "<>" | "<" | "<=" | ">=" | ">" | "in" | "||") ~ simpleExpression)
-
-  def simpleExpression: Parser[Any] = term ~ rep(("+" | "-" | "or") ~ term)
-
-  def term: Parser[Any] = signedFactor ~ rep(("*" | "/" | "div" | "mod" | "and") ~ signedFactor)
-
-  def signedFactor: Parser[Any] = opt("+" | "-" | "PRIOR") ~ factor
-
-  def factor: Parser[Any] = ("(" ~ expr ~ ")") | functionDesignator | unsignedConstant | ("NOT" ~ factor) | column
-
-  def unsignedConstant: Parser[Any] = string | "NULL"
-
-  def functionDesignator: Parser[Any] = identifier ~ "(" ~ rep("," ~ expr) ~ ")"
+  //  def signedFactor: Parser[Any] = opt("+" | "-" | "PRIOR") ~ factor
+  //
+  //  def factor: Parser[Any] = ("(" ~ expr ~ ")") | functionDesignator | unsignedConstant | ("NOT" ~ factor) | column
+  //
+  //  def unsignedConstant: Parser[Any] = string | "NULL"
+  //
+  //  def functionDesignator: Parser[Any] = identifier ~ "(" ~ rep("," ~ expr) ~ ")"
 
   def case_expression: Parser[Any] = "case_expression" !!!
     "CASE" ~ (searched_case_expression | simple_case_expression) ~ opt(else_clause) ~ "END"

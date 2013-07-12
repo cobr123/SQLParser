@@ -9,7 +9,7 @@ import local.sqlparser.SQLParser
  * To change this template use File | Settings | File Templates.
  */
 object TestSqlParser extends SQLParser with App {
-  val file = new File("C:\\Users\\path\\sqlTests\\bind var.txt");
+  val file = new File("sqlTests\\bind var.txt");
   val source = scala.io.Source.fromFile(file)
   val lines = source.mkString.toUpperCase()
   source.close()
