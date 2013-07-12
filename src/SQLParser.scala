@@ -101,14 +101,13 @@ class SQLParser extends DebugJavaTokenParsers {
 
   def select_list: Parser[Any] = "select_list" !!! (
     "*"
-      | repsep(expr ~ opt(opt("AS") ~ c_alias), ",")
-      | repsep((query_name ~ "." ~ "*"), ",")
+      | repsep((expr ~ opt(opt("AS") ~ c_alias)) | (query_name ~ "." ~ "*"), ",")
     )
 
   //http://docs.oracle.com/cd/B28359_01/server.111/b28286/expressions.htm
-  def expr: Parser[Any] = "expr" !!! (
+  def expr: Parser[Any] = "expr" !!!  (
     function_expression |
-//      compound_expression |
+      compound_expression |
       simple_expression
     )
 
@@ -129,18 +128,15 @@ class SQLParser extends DebugJavaTokenParsers {
     string
       | number
       | comment
-      | (opt(opt(schema ~ ".") ~ table ~ ".") ~ column)
+      | opt(opt(schema ~ ".") ~ table ~ ".") ~ column
     )
 
 
   //http://docs.oracle.com/cd/B28359_01/server.111/b28286/expressions003.htm#sthref2739
-//  def compound_expression: Parser[Any] = "compound_expression" !!! compound_expression1 | compound_expression2 | compound_expression3
-//
-//  def compound_expression1: Parser[Any] = "compound_expression1" !!! "(" ~ expr ~ ")"
-//
-//  def compound_expression2: Parser[Any] = "compound_expression2" !!! ("+" | "-" | "PRIOR") ~ expr
-//
-//  def compound_expression3: Parser[Any] = "compound_expression3" !!! (expr ~ ("*" | "/" | "+" | "-" | "||") ~ expr)
+  def compound_expression: Parser[Any] = "compound_expression" !!! compound_expression1 ~ opt(("*" | "/" | "+" | "-" | "||") ~ compound_expression1)
+
+  def compound_expression1: Parser[Any] = "compound_expression1" !!! "(" ~ expr ~ ")" | opt("+" | "-" | "PRIOR") ~simple_expression
+
 
   //  def expr: Parser[Any] = simpleExpression ~ rep(("=" | "<>" | "<" | "<=" | ">=" | ">" | "in" | "||") ~ simpleExpression)
   //
@@ -195,23 +191,12 @@ class SQLParser extends DebugJavaTokenParsers {
 
   //http://docs.oracle.com/cd/B28359_01/server.111/b28286/functions001.htm#i88893
   def function_expression: Parser[Any] = "function_expression" !!!
-    (/*single_row_function
-      | aggregate_function
-      |*/ analytic_function
-      //      | object_reference_function
-      //      | model_function
+    ( analytic_function
       | user_defined_function
       )
 
   def analytic_function: Parser[Any] = "analytic_function" !!!
-    analytic_function_name ~ "(" ~ opt(arguments) ~ ")" ~ "OVER" ~ "(" ~ analytic_clause ~ ")"
-
-  def analytic_function_name: Parser[Any] = "analytic_function_name" !!! identifier
-
-  def arguments: Parser[Any] = "arguments" !!! repsep(expr, ",")
-
-  def analytic_clause: Parser[Any] = "analytic_clause" !!!
-    opt(query_partition_clause) ~ opt(order_by_clause ~ opt(windowing_clause))
+    identifier ~! "(" ~ repsep(expr, ",") ~ ")" ~! "OVER" ~! "(" ~ opt(query_partition_clause) ~ opt(order_by_clause ~ opt(windowing_clause)) ~ ")"
 
   def windowing_clause: Parser[Any] = "windowing_clause" !!!
     ("ROWS" | "RANGE") ~
@@ -233,24 +218,11 @@ class SQLParser extends DebugJavaTokenParsers {
 
   def value_expr: Parser[Any] = "value_expr" !!! simple_expression
 
-  //  def object_reference_function: Parser[Any] =
-
-  //  def model_function: Parser[Any] =
-
   def user_defined_function: Parser[Any] = "user_defined_function" !!!
-    opt(schema ~ ".") ~
-      opt(package_name ~ ".") ~
-      function ~
+      rep(package_name ~ ".") ~
+        identifier  ~ opt("(" ~ repsep(expr, ",") ~ ")")~
       opt("@" ~ dblink) ~
       opt("(" ~ opt(opt("DISTINCT" | "ALL") ~ repsep(expr, ",")) ~ ")")
-
-  def function: Parser[Any] = "function" !!!
-    function_name ~ opt("(" ~ opt(function_params) ~ ")")
-
-  def function_name: Parser[Any] = "function_name" !!! identifier
-
-  def function_params: Parser[Any] = "function_params" !!! repsep(expr, ",")
-
 
   //  def user_defined_operator: Parser[Any] =
 
